@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import sys
-from uuid import uuid4
 
 from prompt_toolkit.shortcuts import clear
 
@@ -220,7 +219,7 @@ async def run_session(
     def on_event(event: Event) -> None:
         loop.create_task(on_event_async(event))
 
-    event_stream.subscribe(EventStreamSubscriber.MAIN, on_event, str(uuid4()))
+    event_stream.subscribe(EventStreamSubscriber.MAIN, on_event, sid)
 
     await runtime.connect()
     await add_mcp_tools_to_agent(agent, runtime, config.mcp)
@@ -360,7 +359,12 @@ async def main(loop: asyncio.AbstractEventLoop) -> None:
 
     # Run the first session
     new_session_requested = await run_session(
-        loop, config, settings_store, current_dir, task_str
+        loop,
+        config,
+        settings_store,
+        current_dir,
+        task_str,
+        session_name=args.name,
     )
 
     # If a new session was requested, run it
