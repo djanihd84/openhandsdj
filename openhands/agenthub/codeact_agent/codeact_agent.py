@@ -123,8 +123,8 @@ class CodeActAgent(Agent):
             if sys.platform == 'win32':
                 logger.warning('Windows runtime does not support browsing yet')
             else:
-                tools.append(WebReadTool)
                 tools.append(BrowserTool)
+                tools.append(WebReadTool)
         if self.config.enable_jupyter:
             tools.append(IPythonTool)
         if self.config.enable_llm_editor:
