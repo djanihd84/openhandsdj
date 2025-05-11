@@ -328,6 +328,7 @@ async def test_main_without_task(
     mock_args = MagicMock()
     mock_args.agent_cls = None
     mock_args.llm_config = None
+    mock_args.name = None
     mock_parse_args.return_value = mock_args
 
     # Mock config
@@ -374,7 +375,7 @@ async def test_main_without_task(
 
     # Check that run_session was called with expected arguments
     mock_run_session.assert_called_once_with(
-        loop, mock_config, mock_settings_store, '/test/dir', None
+        loop, mock_config, mock_settings_store, '/test/dir', None, session_name=None
     )
 
 
