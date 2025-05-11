@@ -247,8 +247,10 @@ async def test_run_session_with_initial_action(
     mock_create_runtime.return_value = mock_runtime
 
     mock_controller = AsyncMock()
-    mock_controller_task = MagicMock()
-    mock_create_controller.return_value = (mock_controller, mock_controller_task)
+    mock_create_controller.return_value = (
+        mock_controller,
+        None,
+    )  # Ensure initial_state is None for this test
 
     mock_memory = AsyncMock()
     mock_create_memory.return_value = mock_memory
