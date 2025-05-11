@@ -42,6 +42,7 @@ from openhands.core.setup import (
     create_controller,
     create_memory,
     create_runtime,
+    generate_sid,
     initialize_repository_for_runtime,
 )
 from openhands.events import EventSource, EventStreamSubscriber
@@ -95,11 +96,12 @@ async def run_session(
     settings_store: FileSettingsStore,
     current_dir: str,
     initial_user_action: str | None = None,
+    session_name: str | None = None,
 ) -> bool:
     reload_microagents = False
     new_session_requested = False
 
-    sid = str(uuid4())
+    sid = generate_sid(config, session_name)
     is_loaded = asyncio.Event()
     is_paused = asyncio.Event()  # Event to track agent pause requests
     always_confirm_mode = False  # Flag to enable always confirm mode
@@ -120,7 +122,7 @@ async def run_session(
         agent=agent,
     )
 
-    controller, _ = create_controller(agent, runtime, config)
+    controller, initial_state = create_controller(agent, runtime, config)
 
     event_stream = runtime.event_stream
 
@@ -252,14 +254,37 @@ async def run_session(
     # Show OpenHands welcome
     display_welcome_message()
 
-    if initial_user_action:
-        # If there's an initial user action, enqueue it and do not prompt again
+    # Handle initial state / initial user action
+    if initial_state is not None:  # Check if a session was restored
+        logger.info(f'Resuming session: {sid}')
+        # If there was a last error, or just generally resuming, provide a message.
+        # Using a generic resume message for now.
+        # The core/main.py specifically checks initial_state.last_error
+        resume_message = 'Resuming previous session.'
+        if initial_state.last_error:
+            resume_message += (
+                ' The last session ended with an error. '
+                'Please review the state carefully. You might want to ask about the error or restart the task.'
+            )
+        else:
+            resume_message += ' Continuing from where you left off.'
+
+        # Display this message to the user via TUI if possible, or log it.
+        # For now, let's add it as a MessageAction to the event stream, which should get displayed.
+        event_stream.add_event(MessageAction(content=resume_message), EventSource.USER)
+        # If a task was provided via -t or -f (initial_user_action),
+        # it's probably best to ignore it if we're resuming a session.
+        # The agent will continue based on its restored state.
+        # The prompt_for_next_task will be triggered if the agent enters AWAITING_USER_INPUT.
+        # If the restored state is already AWAITING_USER_INPUT, on_event_async will handle it.
+    elif initial_user_action:
+        # If there's an initial user action (and no session restored), enqueue it
         display_initial_user_prompt(initial_user_action)
         event_stream.add_event(
             MessageAction(content=initial_user_action), EventSource.USER
         )
     else:
-        # Otherwise prompt for the user's first message right away
+        # Otherwise (no session restored, no initial action), prompt for the user's first message
         asyncio.create_task(prompt_for_next_task(''))
 
     await run_agent_until_done(
